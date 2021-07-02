@@ -15,4 +15,6 @@ Related stacks:
 
 For discussion, please check out the
 https://groups.google.com/group/ros-sig-navigation mailing list.
-# navgation
+
+
+modified global planning module not to clear around the goal cell
