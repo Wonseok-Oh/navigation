@@ -71,15 +71,22 @@ bool AStarExpansion::calculatePotentials(unsigned char* costs, double start_x, d
         add(costs, potential, potential[i], i - nx_, end_x, end_y);
 
         cycle++;
-        /**********************************************
-         * Added for debugging
+        /* Added for debugging
         int num, counter = 0;
+        std::cout << "start_i: " << start_i << std::endl;
+        std::cout << "goal_i: " << goal_i << std::endl;
         std::cout << "Printing potential" << std::endl;
-        for (int j=90; ; j++){
+        for (int j=380; ; j++){
+        	if (j < 100){
+        		std::cout << "0";
+        		if (j < 10){
+        			std::cout << "0";
+        		}
+        	}
             std::cout << j << ":" << potential[j] << " ";
-            if (j % 10 == 9) {
+            if (j % 20 == 19) {
             	std::cout << std::endl;
-            	j-= 20;
+            	j-= 40;
             }
             if (j < -1) {
             	break;

@@ -65,7 +65,7 @@ Costmap2DROS::Costmap2DROS(const std::string& name, tf2_ros::Buffer& tf) :
     layered_costmap_(NULL),
     name_(name),
     tf_(tf),
-    transform_tolerance_(1000),
+    transform_tolerance_(10000),
     map_update_thread_shutdown_(false),
     stop_updates_(false),
     initialized_(true),

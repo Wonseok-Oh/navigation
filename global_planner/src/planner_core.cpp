@@ -69,7 +69,7 @@ void GlobalPlanner::outlineMap(unsigned char* costarr, int nx, int ny, unsigned 
 GlobalPlanner::GlobalPlanner() :
         costmap_(NULL), initialized_(false), allow_unknown_(true),
         p_calc_(NULL), planner_(NULL), path_maker_(NULL), orientation_filter_(NULL),
-        potential_array_(NULL) {
+        potential_array_(NULL){
 }
 
 GlobalPlanner::GlobalPlanner(std::string name, costmap_2d::Costmap2D* costmap, std::string frame_id) :
@@ -123,9 +123,9 @@ void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2D* costmap,
                 de->setPreciseStart(true);
             planner_ = de;
         }
-        else
+        else {
             planner_ = new AStarExpansion(p_calc_, cx, cy);
-
+        }
         bool use_grid_path;
         private_nh.param("use_grid_path", use_grid_path, false);
         if (use_grid_path)
@@ -169,15 +169,20 @@ void GlobalPlanner::reconfigureCB(global_planner::GlobalPlannerConfig& config, u
     orientation_filter_->setWindowSize(config.orientation_window_size);
 }
 
-void GlobalPlanner::clearRobotCell(const geometry_msgs::PoseStamped& global_pose, unsigned int mx, unsigned int my) {
+bool GlobalPlanner::clearRobotCell(const geometry_msgs::PoseStamped& global_pose, unsigned int mx, unsigned int my) {
     if (!initialized_) {
         ROS_ERROR(
                 "This planner has not been initialized yet, but it is being used, please call initialize() before use");
-        return;
+        return false;
     }
 
     //set the associated costs in the cost map to be free
+    unsigned char cost = costmap_->getCost(mx, my);
     costmap_->setCost(mx, my, costmap_2d::FREE_SPACE);
+    if (cost != costmap_2d::FREE_SPACE){
+    	return false;
+    }
+    return true;
 }
 
 bool GlobalPlanner::makePlanService(nav_msgs::GetPlan::Request& req, nav_msgs::GetPlan::Response& resp) {
@@ -276,8 +281,10 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     }
 
     //clear the starting cell within the costmap because we know it can't be an obstacle
-    clearRobotCell(start, start_x_i, start_y_i);
+    bool start_changed = clearRobotCell(start, start_x_i, start_y_i);
 
+    // clear the goal cell within the costmap
+    bool goal_changed = clearRobotCell(goal, goal_x_i, goal_y_i);
     int nx = costmap_->getSizeInCellsX(), ny = costmap_->getSizeInCellsY();
 
     //make sure to resize the underlying array that Navfn uses
@@ -292,11 +299,11 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     bool found_legal = planner_->calculatePotentials(costmap_->getCharMap(), start_x, start_y, goal_x, goal_y,
                                                     nx * ny * 2, potential_array_);
 
-    //if(!old_navfn_behavior_)
-    //    planner_->clearEndpoint(costmap_->getCharMap(), potential_array_, goal_x_i, goal_y_i, 2);
-    if(publish_potential_)
+    if(!old_navfn_behavior_)
+        planner_->clearEndpoint(costmap_->getCharMap(), potential_array_, goal_x_i, goal_y_i, 0);
+    if(publish_potential_){
         publishPotential(potential_array_);
-
+    }
     if (found_legal) {
         //extract the plan
         if (getPlanFromPotential(start_x, start_y, goal_x, goal_y, goal, plan)) {
@@ -311,6 +318,10 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
         ROS_ERROR("Failed to get a plan.");
     }
 
+    if (initialized_){
+    	if (start_changed) costmap_->setCost(start_x_i, start_y_i, costmap_2d::LETHAL_OBSTACLE);
+    	if (goal_changed) costmap_->setCost(goal_x_i, goal_y_i, costmap_2d::LETHAL_OBSTACLE);
+    }
     // add orientations if needed
     orientation_filter_->processPath(start, plan);
 

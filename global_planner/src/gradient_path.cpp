@@ -68,7 +68,6 @@ void GradientPath::setSize(int xs, int ys) {
 bool GradientPath::getPath(float* potential, double start_x, double start_y, double goal_x, double goal_y, std::vector<std::pair<float, float> >& path) {
     std::pair<float, float> current;
     int stc = getIndex(goal_x, goal_y);
-
     // set up offset
     float dx = goal_x - (int)goal_x;
     float dy = goal_y - (int)goal_y;
@@ -77,11 +76,13 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
     memset(grady_, 0, ns * sizeof(float));
 
     int c = 0;
+    int oscillation_counter = 0;
+    int first_oscillation_idx = 0;
     while (c++<ns*4) {
         // check if near goal
         double nx = stc % xs_ + dx, ny = stc / xs_ + dy;
 
-        if (fabs(nx - start_x) < .5 && fabs(ny - start_y) < .5) {
+        if (fabs(nx - start_x) < 0.5 && fabs(ny - start_y) < 0.5) {
             current.first = start_x;
             current.second = start_y;
             path.push_back(current);
@@ -107,6 +108,10 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
                 && path[npath - 1].second == path[npath - 3].second) {
             ROS_DEBUG("[PathCalc] oscillation detected, attempting fix.");
             oscillation_detected = true;
+            //if (oscillation_counter == 0){
+            //	first_oscillation_idx = c;
+            //}
+            //oscillation_counter++;
         }
 
         int stcnx = stc + xs_;
@@ -177,7 +182,8 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
 
         // have a good gradient here
         else {
-
+        	//first_oscillation_idx = 0;
+        	//oscillation_counter = 0;
             // get grad at four positions near cell
             gradCell(potential, stc);
             gradCell(potential, stc + 1);
@@ -230,7 +236,11 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
         //printf("[Path] Pot: %0.1f  grad: %0.1f,%0.1f  pos: %0.1f,%0.1f\n",
         //         potential[stc], dx, dy, path[npath-1].first, path[npath-1].second);
     }
-
+    //std::vector<std::pair<float, float> >::const_iterator first = path.begin();
+    //std::vector<std::pair<float, float> >::const_iterator last = path.begin() + first_oscillation_idx;
+    //std::vector<std::pair<float, float> > newpath(first, last);
+    //path.clear();
+    //path.assign(newpath.begin(), newpath.end());
     return false;
 }
 
